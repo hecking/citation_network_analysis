@@ -1,0 +1,93 @@
+---
+title: "Example"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Querying the ESA vectors of papers based on their abstracts and titles.
+
+```{r}
+source("esa_concept_extractor.R")
+```
+
+### 1. Connect to the database
+```{r}
+con <- dbConnect(RSQLite::SQLite(), "esa.db") # esa.db can be downloaded from https://github.com/collide-uni-due/esa_db
+```
+
+**Example:** Querying the ESA vector (association strength with Wikipedia articles) for the word *physics*.
+
+It is important to normalise words using a word stemmer and to transform them to lower case. Otherwise they will probably not be matched to 
+the also normalised terms in the database. This can be done using the tm package.
+```{r}
+require(tm)
+require(dplyr)
+stemDocument(c("Physics", "having", "books")) %>% tolower
+```
+
+Issue the query for *phsics*
+```{r}
+query <- paste("SELECT t.term, a.article, s.tf_idf
+                    FROM terms t, term_article_score s, articles a
+                    WHERE t.term = 'physic'
+                    AND t.id = s.term_id AND a.id = s.article_id
+                    ORDER BY s.tf_idf DESC")
+
+results <- dbGetQuery(con, query)
+
+head(results)
+```
+
+These are the best matching wikipedia articles for the term *Physics*. The problem is that there are some 'List of ...'
+articles which contain the term more frequently than the article on Phsics itself. They can be excluded if needed.
+
+```{r}
+results %>%
+  filter(!startsWith(article, "List of")) %>%
+  head # show first n elements of the ESA vector
+```
+
+
+### 2. Extract concept from whole paper abstracts
+
+**Read the papers from the lak dataset (requires the readr package)**
+```{r}
+require(readr)
+papers <- read_delim("../datasets/lak_papers.tsv", delim = "\t", 
+                       col_names = c("id", "title", "year", "venue", "abstract"))
+
+head(papers)
+```
+
+Paper abstracts are encoded in JSON and only available as inverted indexes (word : [positions in text].
+```{r}
+require(jsonlite)
+
+exampleAbstract <- fromJSON(papers$abstract[99])
+
+exampleAbstract$InvertedIndex
+```
+
+**The concept scores for each paper are extracted in the following way:**
+1. Preprocessing of the abstract and title words (stemming, to lower case, stopword removal, ...). 
+See the preprocess words function in the esa_concept_extractor.R script.
+2. Query the ESA vector for all remaining words.
+3. Importance of a concept $c_i$ (Wikipedia article) for the abstract containing the set of words $W$:
+
+$score(c_i) = \sum_{w_j \in W} {v_{j} * k_{i,j}}$
+
+$v_{j}$ is the number of occurences of word $w_j$ in the title + abstract and $k_{i,j}$ is the association 
+strength (tf_idf value) of $w_j$ to Wikipedia page $c_j$.
+
+**Example for paper 2**
+```{r}
+# 123th row of the paper table, stopwords taken from the tm package, words in the title of the abstract count twice as much as words in the abstract, con = database connection (see above).
+getConceptsForPaper(papers[2,], stopwords = stopwords(), titleWeight = 2, con) %>% 
+  arrange(desc(score)) %>% # sometimes it seems to be better to sort by frequency instead of score.
+  head # View()
+```
+
+
+# Next steps:
+Take titles + abstract of two papers one citing the other. Determine which concepts they may have in common.

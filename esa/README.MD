@@ -19,6 +19,7 @@ install.packages(c("DBI", "RSQLite"))
 The script contains an example() function that also shows the necessary steps to query the ESA vectors for certain papers.
 
 ```R
+source(esa_concept_extractor.R)
 example()
 ```
 

@@ -15,7 +15,7 @@ The dataset was retrieved in the following way:
 
 The covered scope of papers can be depicted as follows:
 
-<img src="./scope_of_data.png" width="700" height="500">
+<img src="./scope_of_data.png" width="500" height="400">
 
 
 The files are in tab separated format (TSV).

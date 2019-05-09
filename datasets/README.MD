@@ -13,9 +13,9 @@ The dataset was retrieved in the following way:
 3. The set of papers was further expanded by all papers citing at least one LAK paper.
 4. All citation relationships between the set of papers were retrieved. 
 
-The resulting set of papers can be depicted as follows:
+The covered scope of papers can be depicted as follows:
 
-![Set of papers][]
+![Scope of data][scope_of_data.png]
 
 The files are in tab separated format (TSV).
 
